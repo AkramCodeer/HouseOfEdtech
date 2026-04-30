@@ -9,6 +9,7 @@ import {
   enrollCourse,
   addLesson,
   getInstructorCourses,
+  generateThumbnail,
 } from '../controllers/courseController';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -28,5 +29,6 @@ router.put('/:id', authenticate, authorize('instructor', 'admin'), updateCourse)
 router.delete('/:id', authenticate, authorize('instructor', 'admin'), deleteCourse);
 router.post('/:id/enroll', authenticate, authorize('student'), enrollCourse);
 router.post('/:id/lessons', authenticate, authorize('instructor', 'admin'), addLesson);
+router.post('/generate-thumbnail', authenticate, authorize('instructor', 'admin'), generateThumbnail);
 
 export default router;

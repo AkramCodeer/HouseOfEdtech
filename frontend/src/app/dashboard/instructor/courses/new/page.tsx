@@ -14,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeftIcon, ArrowPathIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowPathIcon, PlusIcon, TrashIcon, SparklesIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 import Link from 'next/link';
 
 const lessonSchema = z.object({
@@ -43,13 +44,33 @@ export default function CreateCoursePage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [publishAfter, setPublishAfter] = useState(false);
+  const [generatingThumb, setGeneratingThumb] = useState(false);
+  const [thumbPreview, setThumbPreview] = useState('');
 
-  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: standardSchemaResolver(schema),
     defaultValues: { level: 'beginner', price: 0, lessons: [] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lessons' });
+
+  const handleGenerateThumbnail = async () => {
+    const title = watch('title');
+    const description = watch('description');
+    if (!title || title.length < 3) { toast.error('Enter a course title first'); return; }
+    if (!description || description.length < 20) { toast.error('Enter a course description first'); return; }
+    setGeneratingThumb(true);
+    try {
+      const { data } = await api.post('/courses/generate-thumbnail', { title, description });
+      setValue('thumbnail', data.thumbnailUrl);
+      setThumbPreview(data.thumbnailUrl);
+      toast.success('Thumbnail generated!');
+    } catch {
+      toast.error('Failed to generate thumbnail');
+    } finally {
+      setGeneratingThumb(false);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
@@ -139,8 +160,44 @@ export default function CreateCoursePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="thumbnail">Thumbnail URL</Label>
-                <Input id="thumbnail" type="url" placeholder="https://..." {...register('thumbnail')} />
+                <Label htmlFor="thumbnail">Thumbnail</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="thumbnail"
+                    placeholder="https://... or generate below"
+                    {...register('thumbnail')}
+                    onChange={(e) => {
+                      register('thumbnail').onChange(e);
+                      setThumbPreview(e.target.value);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleGenerateThumbnail}
+                    disabled={generatingThumb}
+                    className="flex-shrink-0 gap-1 text-violet-600 border-violet-200 hover:bg-violet-50"
+                    title="AI Generate Thumbnail"
+                  >
+                    {generatingThumb
+                      ? <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                      : <SparklesIcon className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+                {/* Thumbnail preview */}
+                {thumbPreview ? (
+                  <div className="relative h-28 rounded-lg overflow-hidden border mt-1">
+                    <Image src={thumbPreview} alt="Thumbnail preview" fill className="object-cover" unoptimized />
+                  </div>
+                ) : (
+                  <div className="h-28 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground mt-1">
+                    <div className="text-center">
+                      <PhotoIcon className="h-6 w-6 mx-auto mb-1 opacity-40" />
+                      <p className="text-xs">Enter URL or click ✦ to AI generate</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

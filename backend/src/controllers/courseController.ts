@@ -6,6 +6,37 @@ import User from '../models/User';
 import { AuthRequest } from '../types';
 import { createError } from '../middleware/errorHandler';
 
+export const generateThumbnail = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { title, description } = req.body as { title: string; description: string };
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) return next(createError('AI service not configured', 503));
+
+    const prompt = `Given this course title: "${title}" and description: "${description}", respond with ONLY 2-3 comma-separated keywords (no explanation, no punctuation except commas) that best represent the visual subject for a course thumbnail image. Example output: javascript,programming,code`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 30,
+      }),
+    });
+
+    if (!response.ok) return next(createError('AI thumbnail generation failed', 502));
+
+    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
+    const keywords = data.choices[0].message.content.trim().replace(/[^a-zA-Z0-9,\s]/g, '').replace(/\s+/g, '+');
+    const thumbnailUrl = `https://source.unsplash.com/800x450/?${keywords}`;
+
+    res.json({ success: true, thumbnailUrl, keywords });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAllCourses = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { search, category, level, page = 1, limit = 12 } = req.query;
