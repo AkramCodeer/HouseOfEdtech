@@ -35,7 +35,7 @@ export default function QuizPage() {
   const { quizId } = useParams<{ quizId: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
-  const [quiz] = useState<Quiz | null>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [currentQ, setCurrentQ] = useState(0);
@@ -44,11 +44,10 @@ export default function QuizPage() {
 
   useEffect(() => {
     if (!user) { router.push('/login'); return; }
-
-    api.get(`/quizzes/${quizId}`).catch(() => {
-      // Quiz endpoint might need adjustment - try fetching via course
-    });
-    setLoading(false);
+    api.get(`/quizzes/${quizId}`)
+      .then(({ data }) => setQuiz(data.quiz))
+      .catch(() => toast.error('Failed to load quiz'))
+      .finally(() => setLoading(false));
   }, [quizId, user, router]);
 
   const handleAnswer = (qIndex: number, optIndex: number) => {

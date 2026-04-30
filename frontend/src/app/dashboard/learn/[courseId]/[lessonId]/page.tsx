@@ -17,6 +17,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 
+function toEmbedUrl(url: string): string {
+  const short = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (short) return `https://www.youtube.com/embed/${short[1]}`;
+  const long = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+  if (long) return `https://www.youtube.com/embed/${long[1]}`;
+  return url;
+}
+
 export default function LessonViewerPage() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const router = useRouter();
@@ -152,9 +160,10 @@ export default function LessonViewerPage() {
           {currentLesson.videoUrl && (
             <div className="mb-6 rounded-xl overflow-hidden bg-black aspect-video">
               <iframe
-                src={currentLesson.videoUrl.replace('watch?v=', 'embed/')}
+                src={toEmbedUrl(currentLesson.videoUrl)}
                 className="w-full h-full"
                 allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 title={currentLesson.title}
               />
             </div>

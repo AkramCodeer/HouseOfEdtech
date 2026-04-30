@@ -5,6 +5,17 @@ import Course from '../models/Course';
 import { AuthRequest } from '../types';
 import { createError } from '../middleware/errorHandler';
 
+export const getQuizById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const quizId = String(req.params.quizId);
+    const quiz = await Quiz.findById(quizId).select('-questions.correctAnswer');
+    if (!quiz) return next(createError('Quiz not found', 404));
+    res.json({ success: true, quiz });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getQuizzesByCourse = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const courseId = String(req.params.courseId);

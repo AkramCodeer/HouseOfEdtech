@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Course, Progress, User } from '@/lib/types';
+import { Course, Progress, Quiz, User } from '@/lib/types';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   BookOpenIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon, ClockIcon,
   AcademicCapIcon, ArrowPathIcon, LockClosedIcon, PlayCircleIcon, UsersIcon,
+  SparklesIcon, ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 
@@ -30,6 +31,7 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [expandedLesson, setExpandedLesson] = useState<number | null>(null);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
 
   const isEnrolled = progress !== null;
   const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
@@ -46,6 +48,11 @@ export default function CourseDetailPage() {
             setProgress(prog.progress);
           } catch { /* not enrolled */ }
         }
+
+        try {
+          const { data: qData } = await api.get(`/quizzes/course/${id}`);
+          setQuizzes(qData.quizzes || []);
+        } catch { /* no quizzes */ }
       } catch {
         toast.error('Course not found');
         router.push('/courses');
@@ -244,6 +251,52 @@ export default function CourseDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Quizzes */}
+            {quizzes.length > 0 && (
+              <div>
+                <Separator className="mb-6" />
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <ClipboardDocumentListIcon className="h-5 w-5 text-violet-600" />
+                  Practice Quizzes
+                </h2>
+                <div className="space-y-3">
+                  {quizzes.map((quiz) => (
+                    <div key={quiz._id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/20 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                          {quiz.isAIGenerated
+                            ? <SparklesIcon className="h-5 w-5 text-violet-600" />
+                            : <ClipboardDocumentListIcon className="h-5 w-5 text-violet-600" />}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{quiz.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground">{quiz.questions.length} questions</span>
+                            <span className="text-xs text-muted-foreground">•</span>
+                            <span className="text-xs text-muted-foreground">Pass: {quiz.passingScore}%</span>
+                            {quiz.isAIGenerated && (
+                              <Badge className="bg-violet-100 text-violet-700 text-[10px] px-1.5 py-0">AI</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {isEnrolled ? (
+                        <Link href={`/dashboard/quiz/${quiz._id}`}>
+                          <Button size="sm" className="bg-violet-600 hover:bg-violet-700 gap-1.5">
+                            <PlayCircleIcon className="h-3.5 w-3.5" /> Take Quiz
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button size="sm" variant="outline" disabled>
+                          <LockClosedIcon className="h-3.5 w-3.5 mr-1.5" /> Enroll to unlock
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Tags */}
             {course.tags.length > 0 && (
