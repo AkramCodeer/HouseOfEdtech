@@ -6,37 +6,57 @@ import User from '../models/User';
 import { AuthRequest } from '../types';
 import { createError } from '../middleware/errorHandler';
 
+const STOP_WORDS = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','are','was','be','this','that','it','its','course','learn','complete','beginners','advanced','intermediate','using','how','what','why','web','development','programming']);
+
+function extractKeywords(title: string, description: string): string {
+  const text = `${title} ${description}`;
+  const words = text.toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+  return [...new Set(words)].slice(0, 3).join(',') || 'education,learning';
+}
+
 export const generateThumbnail = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { title, description } = req.body as { title: string; description: string };
+    if (!title) return next(createError('Title is required', 400));
+
+    let keywords = '';
     const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) return next(createError('AI service not configured', 503));
 
-    const prompt = `Given this course title: "${title}" and description: "${description}", respond with ONLY 2-3 comma-separated keywords (no explanation, no punctuation except commas) that best represent the visual subject for a course thumbnail image. Example output: javascript,programming,code`;
+    if (geminiApiKey) {
+      try {
+        const prompt = `Given this course title: "${title}" and description: "${description}", respond with ONLY 2-3 comma-separated keywords (no explanation, no punctuation except commas) that best represent the visual subject for a course thumbnail image. Example output: javascript,programming,code`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 30 },
-        }),
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 30 },
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json() as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> };
+          keywords = data.candidates[0].content.parts[0].text.trim().replace(/[^a-zA-Z0-9,\s]/g, '').replace(/\s+/g, '+');
+        } else {
+          const errBody = await response.json().catch(() => ({}));
+          console.error('Gemini API error:', response.status, JSON.stringify(errBody));
+        }
+      } catch (geminiErr) {
+        console.error('Gemini request failed:', geminiErr);
       }
-    );
-
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      console.error('Gemini API error:', response.status, JSON.stringify(errBody));
-      return next(createError(`AI thumbnail generation failed: ${response.status}`, 502));
     }
 
-    const data = await response.json() as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> };
-    const raw = data.candidates[0].content.parts[0].text;
-    const keywords = raw.trim().replace(/[^a-zA-Z0-9,\s]/g, '').replace(/\s+/g, '+');
-    const thumbnailUrl = `https://source.unsplash.com/800x450/?${keywords}`;
+    // Fallback: extract keywords from title/description directly
+    if (!keywords) keywords = extractKeywords(title, description);
 
+    const thumbnailUrl = `https://source.unsplash.com/800x450/?${keywords}`;
     res.json({ success: true, thumbnailUrl, keywords });
   } catch (err) {
     next(err);
