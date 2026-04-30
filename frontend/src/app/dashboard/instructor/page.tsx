@@ -165,33 +165,36 @@ export default function InstructorDashboard() {
           ) : (
             <div className="space-y-3">
               {courses.map((course) => (
-                <div key={course._id} className="flex items-center gap-4 p-4 border rounded-xl hover:bg-muted/20 transition-colors">
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-                    <BookOpenIcon className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-sm truncate">{course.title}</h3>
-                      <Badge
-                        variant={course.isPublished ? 'default' : 'secondary'}
-                        className={course.isPublished ? 'bg-green-100 text-green-700' : ''}
-                      >
-                        {course.isPublished ? 'Published' : 'Draft'}
-                      </Badge>
+                <div key={course._id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border rounded-xl hover:bg-muted/20 transition-colors">
+                  {/* Top row: icon + info */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                      <BookOpenIcon className="h-5 w-5 text-white" />
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><BookOpenIcon className="h-3 w-3" />{course.lessons?.length || 0} lessons</span>
-                      <span className="flex items-center gap-1"><UsersIcon className="h-3 w-3" />{course.enrolledStudents?.length || 0} students</span>
-                      <span className="capitalize">{course.level}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-semibold text-sm truncate">{course.title}</h3>
+                        <Badge
+                          variant={course.isPublished ? 'default' : 'secondary'}
+                          className={`flex-shrink-0 ${course.isPublished ? 'bg-green-100 text-green-700' : ''}`}
+                        >
+                          {course.isPublished ? 'Published' : 'Draft'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><BookOpenIcon className="h-3 w-3" />{course.lessons?.length || 0} lessons</span>
+                        <span className="flex items-center gap-1"><UsersIcon className="h-3 w-3" />{course.enrolledStudents?.length || 0} students</span>
+                        <span className="capitalize">{course.level}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Bottom row on mobile / right side on desktop: action buttons */}
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setGenerateCourseId(course._id)}
                       className="text-xs gap-1 text-violet-600 border-violet-200 hover:bg-violet-50"
-                      title="Generate AI Quiz"
                     >
                       <SparklesIcon className="h-3.5 w-3.5" /> AI Quiz
                     </Button>
