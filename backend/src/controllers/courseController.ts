@@ -15,7 +15,7 @@ export const generateThumbnail = async (req: AuthRequest, res: Response, next: N
     const prompt = `Given this course title: "${title}" and description: "${description}", respond with ONLY 2-3 comma-separated keywords (no explanation, no punctuation except commas) that best represent the visual subject for a course thumbnail image. Example output: javascript,programming,code`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -26,7 +26,11 @@ export const generateThumbnail = async (req: AuthRequest, res: Response, next: N
       }
     );
 
-    if (!response.ok) return next(createError('AI thumbnail generation failed', 502));
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      console.error('Gemini API error:', response.status, JSON.stringify(errBody));
+      return next(createError(`AI thumbnail generation failed: ${response.status}`, 502));
+    }
 
     const data = await response.json() as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> };
     const raw = data.candidates[0].content.parts[0].text;
