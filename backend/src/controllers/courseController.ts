@@ -56,7 +56,9 @@ export const generateThumbnail = async (req: AuthRequest, res: Response, next: N
     // Fallback: extract keywords from title/description directly
     if (!keywords) keywords = extractKeywords(title, description);
 
-    const thumbnailUrl = `https://source.unsplash.com/800x450/?${keywords}`;
+    // Use first keyword as seed for a consistent, reliable image
+    const seed = keywords.split(',')[0].trim() || 'education';
+    const thumbnailUrl = `https://picsum.photos/seed/${encodeURIComponent(seed)}/800/450`;
     res.json({ success: true, thumbnailUrl, keywords });
   } catch (err) {
     next(err);
